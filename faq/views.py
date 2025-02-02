@@ -1,5 +1,3 @@
-# views.py
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.core.cache import cache
@@ -14,23 +12,22 @@ class FAQAPIView(APIView):
         """Helper method to get or generate cached data"""
         data = []
         for faq in faqs:
-            if language in ['hi', 'bn'] and hasattr(faq, f'question_{language}'):
-                question = getattr(faq, f'question_{language}')
-            else:
-                question = faq.question
-                
-            # Get translated answer
             try:
+                # Always use dynamic translation for consistency
                 translated_data = faq.translate_text(language)
-                answer = translated_data['answer']
-            except Exception as e:
-                logger.error(f"Translation error: {e}")
-                answer = faq.answer
                 
-            data.append({
-                'question': question,
-                'answer': answer,
-            })
+                data.append({
+                    'question': translated_data['question'],
+                    'answer': translated_data['answer'],
+                })
+            except Exception as e:
+                logger.error(f"Translation error for FAQ {faq.id}: {e}")
+                # Fallback to original text if translation fails
+                data.append({
+                    'question': faq.question,
+                    'answer': faq.answer,
+                })
+                
         return data
 
     def get(self, request):
